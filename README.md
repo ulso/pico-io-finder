@@ -7,6 +7,14 @@ DNS-SD implementation, verifies candidates using `/api/status`, and opens the
 device's numeric IP address in the default browser. The browser therefore does
 not need to resolve a `.local` hostname itself.
 
+## Releases
+
+Tagged releases publish an unsigned, portable Windows x86-64 archive on the
+GitHub Releases page. Extract the ZIP and run `pico-io-finder.exe`. Windows may
+show a SmartScreen warning because these early test builds are not code-signed.
+The application uses the WebView2 runtime included with current Windows 11
+installations.
+
 ## Development
 
 Requirements:

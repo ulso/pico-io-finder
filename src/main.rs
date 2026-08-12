@@ -1,3 +1,5 @@
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 use dioxus::prelude::*;
 use pico_io_finder::{Device, DiscoveryEvent, run_discovery};
 use tokio::sync::mpsc;

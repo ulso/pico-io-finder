@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-portable:
+    name: Windows x86-64 portable release
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.96.0
+      - name: Verify release tag
+        shell: pwsh
+        run: |
+          $cargoVersion = (cargo metadata --no-deps --format-version 1 | ConvertFrom-Json).packages[0].version
+          if ($env:GITHUB_REF_NAME -ne "v$cargoVersion") {
+            throw "Tag $env:GITHUB_REF_NAME does not match Cargo version v$cargoVersion"
+          }
+      - name: Test
+        run: cargo test --locked --all-features
+      - name: Build Windows executable
+        run: cargo build --release --locked --bin pico-io-finder
+      - name: Package portable archive
+        id: package
+        shell: pwsh
+        run: |
+          $archive = "pico-io-finder-$env:GITHUB_REF_NAME-windows-x86_64.zip"
+          $staging = "dist/pico-io-finder-$env:GITHUB_REF_NAME-windows-x86_64"
+          New-Item -ItemType Directory -Force -Path $staging | Out-Null
+          Copy-Item target/release/pico-io-finder.exe $staging/
+          Copy-Item README.md $staging/
+          Copy-Item LICENSE $staging/
+          Compress-Archive -Path "$staging/*" -DestinationPath "dist/$archive"
+          $hash = (Get-FileHash "dist/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $archive" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          "archive=$archive" >> $env:GITHUB_OUTPUT
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pico-io-finder-windows-x86_64
+          retention-days: 14
+          path: |
+            dist/${{ steps.package.outputs.archive }}
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+      - name: Publish GitHub prerelease
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "dist/${{ steps.package.outputs.archive }}" `
+            dist/SHA256SUMS.txt `
+            --verify-tag `
+            --title "Pico I/O Finder $env:GITHUB_REF_NAME" `
+            --generate-notes `
+            --prerelease
