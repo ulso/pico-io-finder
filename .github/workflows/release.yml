@@ -41,7 +41,8 @@ jobs:
           Copy-Item LICENSE $staging/
           Compress-Archive -Path "$staging/*" -DestinationPath "dist/$archive"
           $hash = (Get-FileHash "dist/$archive" -Algorithm SHA256).Hash.ToLowerInvariant()
-          "$hash  $archive" | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+          $checksumPath = Join-Path $PWD "dist/SHA256SUMS.txt"
+          [System.IO.File]::WriteAllText($checksumPath, "$hash  $archive`n", [System.Text.UTF8Encoding]::new($false))
           "archive=$archive" >> $env:GITHUB_OUTPUT
       - name: Upload workflow artifact
         uses: actions/upload-artifact@v4
