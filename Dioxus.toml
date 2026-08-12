@@ -1,0 +1,9 @@
+[application]
+name = "pico-io-finder"
+default_platform = "desktop"
+
+[bundle]
+identifier = "io.github.ulso.pico-io-finder"
+publisher = "ulso"
+category = "Utility"
+short_description = "Find and open Pico I/O devices on the local network"

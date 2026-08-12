@@ -1,0 +1,40 @@
+[package]
+name = "pico-io-finder"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+description = "Discover Pico I/O devices and open their local web interfaces"
+license = "MIT"
+publish = false
+
+[lib]
+name = "pico_io_finder"
+path = "src/lib.rs"
+
+[[bin]]
+name = "pico-io-finder"
+path = "src/main.rs"
+required-features = ["desktop"]
+
+[[bin]]
+name = "pico-io-discover"
+path = "src/bin/pico-io-discover.rs"
+
+[features]
+default = ["desktop"]
+desktop = ["dep:dioxus", "dep:webbrowser"]
+
+[dependencies]
+dioxus = { version = "=0.7.3", default-features = false, features = ["minimal", "desktop"], optional = true }
+mdns-sd-discovery = "=0.3.0"
+reqwest = { version = "=0.12.28", default-features = false, features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1.53", features = ["macros", "rt-multi-thread", "signal", "sync", "time"] }
+webbrowser = { version = "=1.2.4", optional = true }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
