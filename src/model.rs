@@ -44,8 +44,8 @@ impl Device {
         &self.status.serial
     }
 
-    /// The numeric origin used to avoid browser `.local` resolver problems.
-    pub fn origin(&self) -> String {
+    /// The numeric origin retained as a resolver-independent fallback.
+    pub fn numeric_origin(&self) -> String {
         if self.port == 80 {
             format!("http://{}", self.address)
         } else {
@@ -53,9 +53,31 @@ impl Device {
         }
     }
 
-    /// The device's built-in start page.
+    /// The advertised mDNS origin, if the service supplied a hostname.
+    pub fn mdns_origin(&self) -> Option<String> {
+        let host_name = self.host_name.trim().trim_end_matches('.');
+        if host_name.is_empty() {
+            None
+        } else if self.port == 80 {
+            Some(format!("http://{host_name}"))
+        } else {
+            Some(format!("http://{host_name}:{}", self.port))
+        }
+    }
+
+    /// The preferred origin for browser navigation.
+    pub fn origin(&self) -> String {
+        self.mdns_origin().unwrap_or_else(|| self.numeric_origin())
+    }
+
+    /// The device's built-in start page, preferably addressed by mDNS name.
     pub fn open_url(&self) -> String {
         format!("{}/", self.origin())
+    }
+
+    /// The device's built-in start page addressed by numeric IPv4 address.
+    pub fn numeric_open_url(&self) -> String {
+        format!("{}/", self.numeric_origin())
     }
 }
 
@@ -69,6 +91,24 @@ pub struct RemovedDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn device(host_name: &str, port: u16) -> Device {
+        Device {
+            service_name: "Pico I/O Test".to_owned(),
+            host_name: host_name.to_owned(),
+            address: Ipv4Addr::new(10, 17, 31, 1),
+            port,
+            interface_index: Some(7),
+            status: ApiStatus {
+                device: "pico-io-bridge".to_owned(),
+                manufacturer: "Pico I/O".to_owned(),
+                board: "Test board".to_owned(),
+                serial: "ABC123".to_owned(),
+                firmware: "0.1.0".to_owned(),
+                network: "cdc-ncm".to_owned(),
+            },
+        }
+    }
 
     #[test]
     fn accepts_current_product_identity() {
@@ -96,5 +136,28 @@ mod tests {
         .unwrap();
 
         assert!(!status.is_pico_io());
+    }
+
+    #[test]
+    fn prefers_mdns_name_for_browser_navigation() {
+        let device = device("pico-io-test.local.", 80);
+
+        assert_eq!(device.open_url(), "http://pico-io-test.local/");
+        assert_eq!(device.numeric_open_url(), "http://10.17.31.1/");
+    }
+
+    #[test]
+    fn preserves_nonstandard_port_in_both_urls() {
+        let device = device("pico-io-test.local", 8080);
+
+        assert_eq!(device.open_url(), "http://pico-io-test.local:8080/");
+        assert_eq!(device.numeric_open_url(), "http://10.17.31.1:8080/");
+    }
+
+    #[test]
+    fn falls_back_to_numeric_url_without_hostname() {
+        let device = device("  ", 80);
+
+        assert_eq!(device.open_url(), "http://10.17.31.1/");
     }
 }

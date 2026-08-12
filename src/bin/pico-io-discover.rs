@@ -22,11 +22,11 @@ async fn main() {
             }
             event = events_rx.recv() => match event {
                 Some(DiscoveryEvent::Found(device)) => println!(
-                    "+ {} [{}] {} {} ({})",
+                    "+ {} [{}] {} [IP {}] ({})",
                     device.status.board,
                     device.status.serial,
                     device.open_url(),
-                    device.host_name,
+                    device.numeric_open_url(),
                     device.service_name,
                 ),
                 Some(DiscoveryEvent::Removed(device)) => {

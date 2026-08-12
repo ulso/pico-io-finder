@@ -23,8 +23,11 @@ h1 { margin: 6px 0; font-size: 38px; }
 .fact { border-top: 1px solid #304451; padding-top: 10px; }
 .fact span { display: block; color: #91a5b5; font-size: 12px; }
 .fact strong { overflow-wrap: anywhere; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .open { border: 0; border-radius: 10px; padding: 10px 16px; color: #07120d; background: #4bd095; font-weight: 750; cursor: pointer; }
 .open:hover { background: #68dda9; }
+.open.secondary { color: #d6e4ed; background: #253947; }
+.open.secondary:hover { background: #304b5e; }
 .empty { border: 1px dashed #344a5b; border-radius: 16px; padding: 34px 20px; color: #aebdca; text-align: center; }
 .warning { color: #ffbd7a; font-size: 13px; overflow-wrap: anywhere; }
 @media (max-width: 620px) { .facts { grid-template-columns: 1fr; } .deviceHead { flex-direction: column; } }
@@ -131,6 +134,8 @@ fn App() -> Element {
 fn DeviceCard(device: Device) -> Element {
     let open_url = device.open_url();
     let button_url = open_url.clone();
+    let numeric_url = device.numeric_open_url();
+    let numeric_button_url = numeric_url.clone();
     let title = if device.status.board.is_empty() {
         device.status.device.clone()
     } else {
@@ -144,12 +149,21 @@ fn DeviceCard(device: Device) -> Element {
                     h2 { "{title}" }
                     div { class: "meta", "{device.service_name}" }
                 }
-                button {
-                    class: "open",
-                    onclick: move |_| {
-                        let _ = webbrowser::open(&button_url);
-                    },
-                    "Open"
+                div { class: "actions",
+                    button {
+                        class: "open secondary",
+                        onclick: move |_| {
+                            let _ = webbrowser::open(&numeric_button_url);
+                        },
+                        "Open IP"
+                    }
+                    button {
+                        class: "open",
+                        onclick: move |_| {
+                            let _ = webbrowser::open(&button_url);
+                        },
+                        "Open"
+                    }
                 }
             }
             div { class: "facts",
@@ -157,7 +171,7 @@ fn DeviceCard(device: Device) -> Element {
                 div { class: "fact", span { "Firmware" } strong { "{device.status.firmware}" } }
                 div { class: "fact", span { "Address" } strong { "{open_url}" } }
             }
-            div { class: "meta", "mDNS: {device.host_name} · network: {device.status.network}" }
+            div { class: "meta", "IP fallback: {numeric_url} · network: {device.status.network}" }
         }
     }
 }

@@ -4,8 +4,8 @@ Native desktop discovery for Pico I/O devices.
 
 The application browses `_http._tcp.local` through the operating system's
 DNS-SD implementation, verifies candidates using `/api/status`, and opens the
-device's numeric IP address in the default browser. The browser therefore does
-not need to resolve a `.local` hostname itself.
+device's advertised `.local` hostname in the default browser. Each device card
+also retains an **Open IP** action as a resolver-independent fallback.
 
 ## Releases
 
@@ -52,7 +52,8 @@ dx serve --desktop
 - Native DNS-SD discovery on macOS, Windows, and Linux
 - HTTP identity verification through `/api/status`
 - Deduplication by device serial number
-- Opening the numeric device address in the system browser
+- Opening the device's stable `.local` URL in the system browser
+- Keeping the numeric device address available as an explicit fallback
 
 The first milestone intentionally does not scan network ranges or enumerate USB
 devices. A direct CDC-NCM probe can be added later if native DNS-SD proves
