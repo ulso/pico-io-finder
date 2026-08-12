@@ -1,6 +1,8 @@
 use std::{collections::HashMap, net::IpAddr, time::Duration};
 
-use mdns_sd_discovery::{BrowseEvent, DiscoveredService, ServiceBrowserBuilder};
+use mdns_sd_discovery::{
+    BrowseEvent, DiscoveredService, ServiceBrowseError, ServiceBrowserBuilder,
+};
 use reqwest::{Client, redirect::Policy};
 use thiserror::Error;
 use tokio::sync::mpsc::UnboundedSender;
@@ -85,6 +87,8 @@ pub async fn run_discovery(events: UnboundedSender<DiscoveryEvent>) -> Result<()
                         }
                     }
                 }
+                Some(Err(ServiceBrowseError::ResolveFailed(name, _)))
+                    if !is_pico_io_service_name(&name) => {}
                 Some(Err(error)) => {
                     if events
                         .send(DiscoveryEvent::Warning(error.to_string()))
@@ -156,14 +160,17 @@ fn service_key(service: &DiscoveredService) -> (String, Option<u32>) {
 }
 
 fn is_pico_io_candidate(service: &DiscoveredService) -> bool {
-    let name = service.name.to_ascii_lowercase();
     let host = service.host_name.to_ascii_lowercase();
-    name.starts_with("pico i/o ")
-        || name.contains("pico-io")
+    is_pico_io_service_name(&service.name)
         || host.starts_with("pico-io-")
         || service
             .txt("device")
             .is_some_and(|value| value.starts_with(b"pico-io-"))
+}
+
+fn is_pico_io_service_name(name: &str) -> bool {
+    let name = name.trim().to_ascii_lowercase();
+    name.starts_with("pico i/o ") || name.starts_with("pico-io")
 }
 
 async fn probe_service(
@@ -295,6 +302,14 @@ mod tests {
             "Office printer",
             "printer.local"
         )));
+    }
+
+    #[test]
+    fn recognises_only_pico_io_service_name_prefixes() {
+        assert!(is_pico_io_service_name("Pico I/O Fruit Jam-CC6D4F"));
+        assert!(is_pico_io_service_name("pico-io-bridge-244c29"));
+        assert!(!is_pico_io_service_name("M33 - 5B51"));
+        assert!(!is_pico_io_service_name("My pico-io test"));
     }
 
     #[test]
